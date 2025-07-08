@@ -198,7 +198,8 @@
       labels.forEach(label => {
         const button = document.createElement('button');
         button.textContent = label;
-        button.onclick = () => addUsage(label);
+        button.setAttribute('type', 'button');
+        button.addEventListener('click', () => addUsage(label));
         container.appendChild(button);
       });
     }
@@ -241,4 +242,6 @@
     window.onload = loadSettings;
   </script>
 </body>
+</html>
+
 </html>
