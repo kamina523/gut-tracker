@@ -271,17 +271,11 @@ function applyCorrection() {
   saveData();
   updateDisplay();
 }
-  correctedRemainingLength = originalLength - usedLength + newRemaining_m;
-  saveData();
-  updateDisplay();
-}
 
 function exportCSV() {
-  let csv = '日時,使用長(m),本数,ラケット名,ガット名
-';
+  let csv = '日時,使用長(m),本数,ラケット名,ガット名\n';
   history.forEach(h => {
-    csv += `${h.date},${h.length.toFixed(2)},${h.count},${h.racket},${h.gut}
-`;
+    csv += `${h.date},${h.length.toFixed(2)},${h.count},${h.racket},${h.gut}\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const link = document.createElement('a');
@@ -294,8 +288,7 @@ function importCSV(event) {
   const file = event.target.files[0];
   const reader = new FileReader();
   reader.onload = function(e) {
-    const lines = e.target.result.split('
-').slice(1);
+    const lines = e.target.result.split('\n').slice(1);
     history = lines.filter(line => line.trim()).map(line => {
       const [date, length, count, racket, gut] = line.split(',');
       return { date, length: parseFloat(length), count: parseFloat(count), racket, gut };
@@ -307,7 +300,6 @@ function importCSV(event) {
 }
 
 window.onload = loadData;
-</script>
+  </script>
 </body>
 </html>
-
