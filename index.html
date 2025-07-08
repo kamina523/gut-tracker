@@ -130,11 +130,7 @@
   </div>
 
   <div class="tab-content active" id="main">
-    <div class="racket-buttons">
-      <button onclick="addUsage('ラケット1')">Pure Aero 98 1</button>
-      <button onclick="addUsage('ラケット2')">Pure Aero 98 2</button>
-      <button onclick="addUsage('ラケット3')">Pure Aero 98 3</button>
-    </div>
+    <div class="racket-buttons" id="racketButtons"></div>
     <div class="result" id="summaryMain"></div>
     <div class="result" id="usageCount"></div>
     <button onclick="resetData()">リセット</button>
@@ -161,6 +157,8 @@
     <input type="number" id="cutsPerUse">
     <label>ガット名:</label>
     <input type="text" id="gutName">
+    <label>ラケット名（カンマ区切り）:</label>
+    <input type="text" id="racketLabels" placeholder="Pure Aero 1,Pure Aero 2,Pure Aero 3">
     <button onclick="applyCorrection()">補正を反映</button>
     <button onclick="exportCSV()">CSV保存</button>
     <input type="file" id="csvInput" accept=".csv" onchange="importCSV(event)">
@@ -184,48 +182,19 @@
   </div>
 
   <script>
-    const INCH_27 = 0.6858;
-    let currentPlayer = 'player1';
-    let players = JSON.parse(localStorage.getItem('players') || '[]');
-    if (!players.includes(currentPlayer)) players.push(currentPlayer);
-    let history = [];
-    let settings = {};
-    let correctedRemainingLength = null;
-
-    function updatePlayerList() {
-      const select = document.getElementById('playerSelect');
-      select.innerHTML = '';
-      players.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p;
-        option.text = p;
-        if (p === currentPlayer) option.selected = true;
-        select.appendChild(option);
+    // --- 追加: ラケットボタン描画関数 ---
+    function renderRacketButtons(labels) {
+      const container = document.getElementById('racketButtons');
+      container.innerHTML = '';
+      labels.forEach((label, i) => {
+        const button = document.createElement('button');
+        button.textContent = label;
+        button.onclick = () => addUsage(label);
+        container.appendChild(button);
       });
-      document.getElementById('playerName').value = currentPlayer;
     }
 
-    function renamePlayer() {
-      const newName = document.getElementById('playerName').value.trim();
-      if (!newName || newName === currentPlayer) return;
-      const index = players.indexOf(currentPlayer);
-      if (index !== -1) players[index] = newName;
-      localStorage.setItem(`gutData_${newName}`, localStorage.getItem(`gutData_${currentPlayer}`));
-      localStorage.setItem(`gutSettings_${newName}`, localStorage.getItem(`gutSettings_${currentPlayer}`));
-      localStorage.removeItem(`gutData_${currentPlayer}`);
-      localStorage.removeItem(`gutSettings_${currentPlayer}`);
-      currentPlayer = newName;
-      localStorage.setItem('players', JSON.stringify(players));
-      updatePlayerList();
-      loadData();
-    }
-
-    function switchPlayer(playerId) {
-      currentPlayer = playerId;
-      updatePlayerList();
-      loadData();
-    }
-
+    // --- 更新: saveSettings にラケットラベルも保存 ---
     function saveSettings() {
       settings = {
         originalLength: document.getElementById('originalLength').value,
@@ -234,38 +203,35 @@
         material: document.getElementById('material').value,
         gauge: document.getElementById('gauge').value,
         cutsPerUse: document.getElementById('cutsPerUse').value,
-        gutName: document.getElementById('gutName').value
+        gutName: document.getElementById('gutName').value,
+        racketLabels: document.getElementById('racketLabels').value
       };
       localStorage.setItem(`gutSettings_${currentPlayer}`, JSON.stringify(settings));
+      renderRacketButtons(getRacketLabels());
     }
 
+    // --- 追加: ラベル取得ユーティリティ ---
+    function getRacketLabels() {
+      return (settings.racketLabels || 'Pure Aero 98 1,Pure Aero 98 2,Pure Aero 98 3')
+        .split(',')
+        .map(s => s.trim());
+    }
+
+    // --- loadSettings にラケットラベル復元を追加 ---
     function loadSettings() {
       const saved = localStorage.getItem(`gutSettings_${currentPlayer}`);
       if (!saved) return;
       settings = JSON.parse(saved);
-      document.getElementById('originalLength').value = settings.originalLength;
-      document.getElementById('currentWeight').value = settings.currentWeight;
-      document.getElementById('caseWeight').value = settings.caseWeight;
-      document.getElementById('material').value = settings.material;
-      document.getElementById('gauge').value = settings.gauge;
-      document.getElementById('cutsPerUse').value = settings.cutsPerUse;
-      document.getElementById('gutName').value = settings.gutName;
+      document.getElementById('originalLength').value = settings.originalLength || '';
+      document.getElementById('currentWeight').value = settings.currentWeight || '';
+      document.getElementById('caseWeight').value = settings.caseWeight || '';
+      document.getElementById('material').value = settings.material || 'poly';
+      document.getElementById('gauge').value = settings.gauge || '1.25';
+      document.getElementById('cutsPerUse').value = settings.cutsPerUse || '';
+      document.getElementById('gutName').value = settings.gutName || '';
+      document.getElementById('racketLabels').value = settings.racketLabels || 'Pure Aero 98 1,Pure Aero 98 2,Pure Aero 98 3';
+      renderRacketButtons(getRacketLabels());
     }
-
-    function saveData() {
-      localStorage.setItem(`gutData_${currentPlayer}`, JSON.stringify(history));
-      saveSettings();
-    }
-
-    function loadData() {
-      const saved = localStorage.getItem(`gutData_${currentPlayer}`);
-      history = saved ? JSON.parse(saved) : [];
-      correctedRemainingLength = null;
-      loadSettings();
-      updateDisplay();
-    }
-
-    // その他の関数は変わらず（省略）
   </script>
 </body>
 </html>
