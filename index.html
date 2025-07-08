@@ -92,6 +92,10 @@
       cursor: pointer;
       width: 100%;
     }
+    button + button {
+      margin-top: 10px;
+    }
+
     button:hover {
       background-color: #005fa3;
     }
@@ -124,9 +128,9 @@
 
   <div class="tab-content active" id="main">
     <div class="racket-buttons">
-      <button onclick="addUsage('ラケット1')">ラケット1 張った！</button>
-      <button onclick="addUsage('ラケット2')">ラケット2 張った！</button>
-      <button onclick="addUsage('ラケット3')">ラケット3 張った！</button>
+      <button onclick="addUsage('ラケット1')">PureAero98 1</button>
+      <button onclick="addUsage('ラケット2')">PureAero98 2</button>
+      <button onclick="addUsage('ラケット3')">PureAero98 3</button>
     </div>
     <div class="result" id="summaryMain"></div>
     <div class="result" id="usageCount"></div>
@@ -175,10 +179,6 @@
       <tbody id="historyTable"></tbody>
     </table>
   </div>
-
-  <p style="text-align:center; margin-top:10px;">
-    iPhoneで使うには、<strong>SafariでこのHTMLを開いて「ホーム画面に追加」</strong>してください。
-  </p>
 
   <script>
     const INCH_27 = 0.6858;
