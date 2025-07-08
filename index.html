@@ -251,7 +251,9 @@
       const gauge = parseFloat(document.getElementById('gauge').value);
       const currentWeight = parseFloat(document.getElementById('currentWeight').value);
       const caseWeight = parseFloat(document.getElementById('caseWeight').value || 0);
-      if (isNaN(currentWeight)) return;
+      const originalLength = parseFloat(document.getElementById('originalLength').value || '200');
+
+      if (isNaN(currentWeight) || isNaN(gauge) || isNaN(originalLength)) return;
 
       const netWeight = currentWeight - caseWeight;
       if (netWeight <= 0) return;
@@ -262,16 +264,11 @@
       const volume = netWeight / density;
       const newRemainingM = volume / area / 100;
 
-      const originalLength = parseFloat(document.getElementById('originalLength').value || '200');
-      let usedLength = history.reduce((sum, h) => sum + h.length, 0);
-      while (usedLength > (originalLength - newRemainingM) && history.length > 0) {
-        history.shift();
-        usedLength = history.reduce((sum, h) => sum + h.length, 0);
-      }
+      const usedLength = history.reduce((sum, h) => sum + h.length, 0);
+      correctedRemainingLength = newRemainingM + usedLength;
 
-      correctedRemainingLength = originalLength - usedLength + newRemainingM;
-      saveData();
       updateDisplay();
+      saveData();
     }
 
     function exportCSV() {
