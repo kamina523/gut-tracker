@@ -180,7 +180,6 @@
   </p>
 
   <script>
-    // スクリプト本体を直接埋め込みます（gut-logic.js不要）
     const INCH_27 = 0.6858;
     let history = [];
     let correctedRemainingLength = null;
@@ -256,20 +255,20 @@
       const netWeight = currentWeight - caseWeight;
       if (netWeight <= 0) return;
 
-      const density = material === 'poly' ? 1.3 : 1.14; // g/cm³
-      const radius = gauge / 2 / 10; // mm → cm
-      const area = Math.PI * radius * radius; // cm²
-      const volume = netWeight / density; // cm³
-      const newRemaining = volume / area / 100; // m
+      const density = material === 'poly' ? 1.3 : 1.14;
+      const radius = gauge / 2 / 10;
+      const area = Math.PI * radius * radius;
+      const volume = netWeight / density;
+      const newRemainingM = volume / area / 100;
 
       const originalLength = parseFloat(document.getElementById('originalLength').value || '200');
       let usedLength = history.reduce((sum, h) => sum + h.length, 0);
-      while (usedLength > (originalLength - newRemaining) && history.length > 0) {
+      while (usedLength > (originalLength - newRemainingM) && history.length > 0) {
         history.shift();
         usedLength = history.reduce((sum, h) => sum + h.length, 0);
       }
 
-      correctedRemainingLength = originalLength - usedLength + newRemaining;
+      correctedRemainingLength = originalLength - usedLength + newRemainingM;
       saveData();
       updateDisplay();
     }
