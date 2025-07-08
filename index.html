@@ -95,7 +95,6 @@
     button + button {
       margin-top: 10px;
     }
-
     button:hover {
       background-color: #005fa3;
     }
@@ -120,12 +119,17 @@
 </head>
 <body>
   <h2>🎾 ガットロール管理ツール</h2>
+  <label for="playerSelect">プレイヤー:</label>
+  <select id="playerSelect" onchange="switchPlayer(this.value)">
+    <option value="player1">プレイヤー1</option>
+    <option value="player2">プレイヤー2</option>
+    <option value="player3">プレイヤー3</option>
+  </select>
   <div class="tabs">
     <div class="tab active" onclick="switchTab('main')">メイン</div>
     <div class="tab" onclick="switchTab('settings')">設定</div>
     <div class="tab" onclick="switchTab('history')">履歴</div>
   </div>
-
   <div class="tab-content active" id="main">
     <div class="racket-buttons">
       <button onclick="addUsage('ラケット1')">Pure Aero 98 1</button>
@@ -136,7 +140,6 @@
     <div class="result" id="usageCount"></div>
     <button onclick="resetData()">リセット</button>
   </div>
-
   <div class="tab-content" id="settings">
     <label>元のロール長さ (m):</label>
     <input type="number" id="originalLength" value="200">
@@ -162,7 +165,6 @@
     <button onclick="exportCSV()">CSV保存</button>
     <input type="file" id="csvInput" accept=".csv" onchange="importCSV(event)">
   </div>
-
   <div class="tab-content" id="history">
     <table>
       <thead>
@@ -179,11 +181,16 @@
       <tbody id="historyTable"></tbody>
     </table>
   </div>
-
   <script>
     const INCH_27 = 0.6858;
+    let currentPlayer = 'player1';
     let history = [];
     let correctedRemainingLength = null;
+
+    function switchPlayer(playerId) {
+      currentPlayer = playerId;
+      loadData();
+    }
 
     function switchTab(id) {
       document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -228,18 +235,18 @@
     }
 
     function saveData() {
-      localStorage.setItem('gutData', JSON.stringify(history));
+      localStorage.setItem(`gutData_${currentPlayer}`, JSON.stringify(history));
     }
 
     function loadData() {
-      const saved = localStorage.getItem('gutData');
-      if (saved) history = JSON.parse(saved);
+      const saved = localStorage.getItem(`gutData_${currentPlayer}`);
+      history = saved ? JSON.parse(saved) : [];
       updateDisplay();
     }
 
     function resetData() {
       if (confirm('履歴と設定をリセットしますか？')) {
-        localStorage.removeItem('gutData');
+        localStorage.removeItem(`gutData_${currentPlayer}`);
         history = [];
         correctedRemainingLength = null;
         updateDisplay();
@@ -279,7 +286,7 @@
       const blob = new Blob([csv], { type: 'text/csv' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = 'gut_history.csv';
+      link.download = `gut_history_${currentPlayer}.csv`;
       link.click();
     }
 
