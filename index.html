@@ -95,6 +95,7 @@
     button + button {
       margin-top: 10px;
     }
+
     button:hover {
       background-color: #005fa3;
     }
@@ -119,10 +120,6 @@
 </head>
 <body>
   <h2>🎾 ガットロール管理ツール</h2>
-  <label for="playerSelect">プレイヤー:</label>
-  <input type="text" id="playerName" value="プレイヤー1" onchange="renamePlayer()">
-  <select id="playerSelect" onchange="switchPlayer(this.value)"></select>
-
   <div class="tabs">
     <div class="tab active" onclick="switchTab('main')">メイン</div>
     <div class="tab" onclick="switchTab('settings')">設定</div>
@@ -130,7 +127,11 @@
   </div>
 
   <div class="tab-content active" id="main">
-    <div class="racket-buttons" id="racketButtons"></div>
+    <div class="racket-buttons">
+      <button onclick="addUsage('ラケット1')">Pure Aero 98 1</button>
+      <button onclick="addUsage('ラケット2')">Pure Aero 98 2</button>
+      <button onclick="addUsage('ラケット3')">Pure Aero 98 3</button>
+    </div>
     <div class="result" id="summaryMain"></div>
     <div class="result" id="usageCount"></div>
     <button onclick="resetData()">リセット</button>
@@ -138,11 +139,11 @@
 
   <div class="tab-content" id="settings">
     <label>元のロール長さ (m):</label>
-    <input type="number" id="originalLength">
+    <input type="number" id="originalLength" value="200">
     <label>現在の重量 (g):</label>
     <input type="number" id="currentWeight">
     <label>ケース重量 (g):</label>
-    <input type="number" id="caseWeight">
+    <input type="number" id="caseWeight" value="18">
     <label>素材:</label>
     <select id="material">
       <option value="poly">ポリエステル</option>
@@ -154,12 +155,10 @@
       <option value="1.30">1.30</option>
     </select>
     <label>一回に使う27インチの本数:</label>
-    <input type="number" id="cutsPerUse">
+    <input type="number" id="cutsPerUse" value="16.4">
     <label>ガット名:</label>
-    <input type="text" id="gutName">
-    <label>ラケット名（カンマ区切り）:</label>
-    <input type="text" id="racketLabels" placeholder="Pure Aero 1,Pure Aero 2,Pure Aero 3">
-    <button onclick="saveSettings(); applyCorrection()">設定を保存して補正を反映</button>
+    <input type="text" id="gutName" value="">
+    <button onclick="applyCorrection()">補正を反映</button>
     <button onclick="exportCSV()">CSV保存</button>
     <input type="file" id="csvInput" accept=".csv" onchange="importCSV(event)">
   </div>
@@ -182,8 +181,9 @@
   </div>
 
   <script>
-    let currentPlayer = 'プレイヤー1';
-    let settings = {};
+    const INCH_27 = 0.6858;
+    let history = [];
+    let correctedRemainingLength = null;
 
     function switchTab(id) {
       document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -192,56 +192,113 @@
       document.getElementById(id).classList.add('active');
     }
 
-    function renderRacketButtons(labels) {
-      const container = document.getElementById('racketButtons');
-      container.innerHTML = '';
-      labels.forEach(label => {
-        const button = document.createElement('button');
-        button.textContent = label;
-        button.setAttribute('type', 'button');
-        button.addEventListener('click', () => addUsage(label));
-        container.appendChild(button);
+    function addUsage(racket) {
+      const cuts = parseFloat(document.getElementById('cutsPerUse').value);
+      const useLength = cuts * INCH_27;
+      const date = new Date().toLocaleString();
+      const gut = document.getElementById('gutName').value;
+      history.push({ date, length: useLength, count: cuts, racket, gut });
+      saveData();
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      const totalUsed = history.reduce((sum, h) => sum + h.length, 0);
+      const originalLength = parseFloat(document.getElementById('originalLength').value) || 200;
+      const remaining = correctedRemainingLength !== null ? correctedRemainingLength - totalUsed : originalLength - totalUsed;
+      const perUse = parseFloat(document.getElementById('cutsPerUse').value) * INCH_27;
+      const remainingUses = Math.floor(remaining / perUse);
+      document.getElementById('summaryMain').innerText = `使用済み: ${totalUsed.toFixed(2)} m ／ 残り: ${remaining.toFixed(2)} m（あと約 ${remainingUses} 回）`;
+      document.getElementById('usageCount').innerText = `合計使用回数: ${history.length} 回`;
+
+      const tbody = document.getElementById('historyTable');
+      tbody.innerHTML = '';
+      history.forEach((h, i) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${h.date}</td>
+          <td>${h.length.toFixed(2)}</td>
+          <td>${h.count}</td>
+          <td contenteditable oninput="history[${i}].racket = this.innerText; saveData()">${h.racket}</td>
+          <td contenteditable oninput="history[${i}].gut = this.innerText; saveData()">${h.gut}</td>
+          <td><button onclick="history.splice(${i}, 1); saveData(); updateDisplay()">削除</button></td>`;
+        tbody.appendChild(row);
       });
     }
 
-    function getRacketLabels() {
-      return (settings.racketLabels || 'Pure Aero 98 1,Pure Aero 98 2,Pure Aero 98 3')
-        .split(',').map(s => s.trim());
+    function saveData() {
+      localStorage.setItem('gutData', JSON.stringify(history));
     }
 
-    function saveSettings() {
-      settings = {
-        originalLength: document.getElementById('originalLength').value,
-        currentWeight: document.getElementById('currentWeight').value,
-        caseWeight: document.getElementById('caseWeight').value,
-        material: document.getElementById('material').value,
-        gauge: document.getElementById('gauge').value,
-        cutsPerUse: document.getElementById('cutsPerUse').value,
-        gutName: document.getElementById('gutName').value,
-        racketLabels: document.getElementById('racketLabels').value
+    function loadData() {
+      const saved = localStorage.getItem('gutData');
+      if (saved) history = JSON.parse(saved);
+      updateDisplay();
+    }
+
+    function resetData() {
+      if (confirm('履歴と設定をリセットしますか？')) {
+        localStorage.removeItem('gutData');
+        history = [];
+        correctedRemainingLength = null;
+        updateDisplay();
+      }
+    }
+
+    function applyCorrection() {
+      const material = document.getElementById('material').value;
+      const gauge = parseFloat(document.getElementById('gauge').value);
+      const currentWeight = parseFloat(document.getElementById('currentWeight').value);
+      const caseWeight = parseFloat(document.getElementById('caseWeight').value || 0);
+      const originalLength = parseFloat(document.getElementById('originalLength').value || '200');
+
+      if (isNaN(currentWeight) || isNaN(gauge) || isNaN(originalLength)) return;
+
+      const netWeight = currentWeight - caseWeight;
+      if (netWeight <= 0) return;
+
+      const density = material === 'poly' ? 1.3 : 1.14;
+      const radius = gauge / 2 / 10;
+      const area = Math.PI * radius * radius;
+      const volume = netWeight / density;
+      const newRemainingM = volume / area / 100;
+
+      const usedLength = history.reduce((sum, h) => sum + h.length, 0);
+      correctedRemainingLength = newRemainingM + usedLength;
+
+      updateDisplay();
+      saveData();
+    }
+
+    function exportCSV() {
+      let csv = '日時,使用長(m),本数,ラケット名,ガット名\r\n';
+      history.forEach(h => {
+        csv += `${h.date},${h.length.toFixed(2)},${h.count},${h.racket},${h.gut}\r\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'gut_history.csv';
+      link.click();
+    }
+
+    function importCSV(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split('\r\n').slice(1);
+        history = lines.filter(line => line.trim()).map(line => {
+          const [date, length, count, racket, gut] = line.split(',');
+          return { date, length: parseFloat(length), count: parseFloat(count), racket, gut };
+        });
+        saveData();
+        updateDisplay();
       };
-      localStorage.setItem(`gutSettings_${currentPlayer}`, JSON.stringify(settings));
-      renderRacketButtons(getRacketLabels());
+      reader.readAsText(file);
     }
 
-    function loadSettings() {
-      const saved = localStorage.getItem(`gutSettings_${currentPlayer}`);
-      if (!saved) return;
-      settings = JSON.parse(saved);
-      document.getElementById('originalLength').value = settings.originalLength || '';
-      document.getElementById('currentWeight').value = settings.currentWeight || '';
-      document.getElementById('caseWeight').value = settings.caseWeight || '';
-      document.getElementById('material').value = settings.material || 'poly';
-      document.getElementById('gauge').value = settings.gauge || '1.25';
-      document.getElementById('cutsPerUse').value = settings.cutsPerUse || '';
-      document.getElementById('gutName').value = settings.gutName || '';
-      document.getElementById('racketLabels').value = settings.racketLabels || 'Pure Aero 98 1,Pure Aero 98 2,Pure Aero 98 3';
-      renderRacketButtons(getRacketLabels());
-    }
-
-    window.onload = loadSettings;
+    window.onload = loadData;
   </script>
 </body>
-</html>
-
 </html>
