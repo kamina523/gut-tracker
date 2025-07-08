@@ -159,7 +159,7 @@
     <input type="text" id="gutName">
     <label>ラケット名（カンマ区切り）:</label>
     <input type="text" id="racketLabels" placeholder="Pure Aero 1,Pure Aero 2,Pure Aero 3">
-    <button onclick="applyCorrection()">補正を反映</button>
+    <button onclick="saveSettings(); applyCorrection()">設定を保存して補正を反映</button>
     <button onclick="exportCSV()">CSV保存</button>
     <input type="file" id="csvInput" accept=".csv" onchange="importCSV(event)">
   </div>
@@ -182,11 +182,20 @@
   </div>
 
   <script>
-    // --- 追加: ラケットボタン描画関数 ---
+    let currentPlayer = 'プレイヤー1';
+    let settings = {};
+
+    function switchTab(id) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.querySelector(`.tab[onclick*="${id}"]`).classList.add('active');
+      document.getElementById(id).classList.add('active');
+    }
+
     function renderRacketButtons(labels) {
       const container = document.getElementById('racketButtons');
       container.innerHTML = '';
-      labels.forEach((label, i) => {
+      labels.forEach(label => {
         const button = document.createElement('button');
         button.textContent = label;
         button.onclick = () => addUsage(label);
@@ -194,7 +203,11 @@
       });
     }
 
-    // --- 更新: saveSettings にラケットラベルも保存 ---
+    function getRacketLabels() {
+      return (settings.racketLabels || 'Pure Aero 98 1,Pure Aero 98 2,Pure Aero 98 3')
+        .split(',').map(s => s.trim());
+    }
+
     function saveSettings() {
       settings = {
         originalLength: document.getElementById('originalLength').value,
@@ -210,14 +223,6 @@
       renderRacketButtons(getRacketLabels());
     }
 
-    // --- 追加: ラベル取得ユーティリティ ---
-    function getRacketLabels() {
-      return (settings.racketLabels || 'Pure Aero 98 1,Pure Aero 98 2,Pure Aero 98 3')
-        .split(',')
-        .map(s => s.trim());
-    }
-
-    // --- loadSettings にラケットラベル復元を追加 ---
     function loadSettings() {
       const saved = localStorage.getItem(`gutSettings_${currentPlayer}`);
       if (!saved) return;
@@ -232,6 +237,8 @@
       document.getElementById('racketLabels').value = settings.racketLabels || 'Pure Aero 98 1,Pure Aero 98 2,Pure Aero 98 3';
       renderRacketButtons(getRacketLabels());
     }
+
+    window.onload = loadSettings;
   </script>
 </body>
 </html>
